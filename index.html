@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html>
+	<head>
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	   <title>Arbitrage</title>
+	<link rel="stylesheet" type="text/css" href="semantic/dist/semantic.min.css">
+	<script
+	  src="https://code.jquery.com/jquery-3.1.1.min.js"
+	  integrity="sha256-hVVnYaiADRTO2PzUGmuLJr8BLUSjGIZsDYGmIJLv2b8="
+	  crossorigin="anonymous"></script>
+	<script src="semantic/dist/semantic.min.js"></script>    
+	<script src="https://cdn.jsdelivr.net/npm/vue"></script>
+	</head>
+	<body style="background-color:#d4d4d5c9;background-image: url(https://content.invisioncic.com/Mtorrbit/set_resources_4/d0e70b4cbb9ab8afb1bc1065a3f8487a_background.png);">
+		<div id="app">
+		   <div class="ui segment container" style="margin-top:5px;">
+		     
+			 <h3 class="ui header">{{name}}</h3>
+		   
+			 <div class="ui two cards">
+				<a class="red card raised ui">
+					<div class="content">
+						<div class="header">cex.io</div>
+						<div class="meta">
+						  <span class="category">EURO: {{rate}}</span>
+						</div>
+						<div class="description">
+						 <table class="ui very basic compact table">
+							<tbody>
+								<tr>
+									<th>COIN</th>
+									<th>LAST</th>
+									<th>BID</th>
+									<th>ASK</th>
+								</tr>
+								<tr v-for="coin in cexCoinList">
+									<td>{{coin.pair | formatCoin}}</td>
+									<td>&euro; {{coin.last}} <span class="ui label">&#x20b9; {{coin.last*rate | formatNumber}}</span></td>
+									<td>&#x20b9; {{coin.bid*rate | formatNumber}}</td>
+									<td>&#x20b9; {{coin.ask*rate | formatNumber}}</td>
+								</tr>
+							</tbody>
+						 </table>
+						</div>
+					  </div>
+					  <div class="extra content">
+						  <div class="right floated author">
+							EURO : {{rate}} 	
+						  </div>                      
+					  </div>
+				</a>
+				<a class="blue card raised ui">
+					<div class="content">
+						<div class="header">Wazrix</div>
+						<div class="meta">
+						  <span class="category">Coin List</span>
+						</div>
+						<div class="description">
+						  <table class="ui very basic compact table">
+							<tbody>
+								<tr>
+									<th>COIN</th>
+									<th>LAST</th>
+									<th>BID</th>
+									<th>ASK</th>
+								</tr>
+								<tr v-for="coin in wazrixCoinList">
+									<td>{{coin.baseMarket | formatUpper}}</td>
+									<td>&#x20b9; {{coin.last}} <span class="ui label teal">{{coin.percent | formatNumber}} %</span></td>
+									<td>&#x20b9; {{coin.buy}}</td>
+									<td>&#x20b9; {{coin.sell}}</td>
+								</tr>
+							</tbody>
+						 </table>
+						</div>
+					  </div>
+					  <div class="extra content">
+						  <div class="right floated author">
+							
+						  </div>                      
+					  </div>
+				</a>
+			 </div>
+		   </div>
+		</div>
+	</body>
+	
+	<script>
+	var app = new Vue({
+  el: '#app',
+  data: {
+    message: 'Loading....',
+	name:'Arbitrage',
+	rate: '',
+	cexCoinList:[],
+	wazrixCoinList: [],
+    coinBalance: {},
+    orders: [],
+    tradingEnabled: false,
+    requestOntheFly: false
+  },
+  created: function(){
+    var vm = this;
+
+		fetch("https://api.exchangeratesapi.io/latest").then(function(response){
+			return response.json();
+		}).then(function(result){
+			vm.rate = result.rates.INR;
+		});
+
+		fetch("https://cex.io/api/tickers/EUR").then(function(response){
+			return response.json();
+		}).then(function(result){
+			vm.cexCoinList = result.data;
+
+			fetch("https://cors-anywhere.herokuapp.com/https://api.wazirx.com/api/v2/market-status").then(function(response){
+			return response.json();
+			}).then(function(result){
+				result.markets.forEach(row => {
+					if(row.quoteMarket == "inr" && row.buy > 0){
+						if(vm.cexContains(row.baseMarket)) {
+							console.log(">>>> ADDING COIN");
+							row.percent = vm.getPercent(row);
+							vm.wazrixCoinList.push(row);
+						}
+						
+					}
+				});
+			});
+
+
+
+		});
+
+	
+
+
+
+    },
+
+  computed: {
+      range: function() {
+          return this.high - this.low;
+      }
+      
+  },
+  methods: {
+	cexContains : function(coin){
+		//return true;
+		rt = false;
+		this.cexCoinList.forEach(c => {
+			//console.log("***"+c.pair.split(":")[0].toLowerCase()+"***"+coin+"***");
+			if(c.pair.split(":")[0].toLowerCase() == coin) rt = true;
+		})
+		return rt;
+	},
+
+	getPercent : function(row){
+		cexCoin = null;
+		vm = this;
+		this.cexCoinList.forEach(c => {
+			if(c.pair.split(":")[0].toLowerCase() == row.baseMarket) cexCoin = c;
+		});
+
+		if(cexCoin){
+			
+			price = cexCoin.last * this.rate;
+			//price =  price + (price * 7/100);
+			//console.log(row.last +" -- "+ price);
+			return ((row.last - price)/(price))*100;
+		} else return 0;
+	}
+
+  },
+  filters: {
+      formatNumber(value){
+          if(isNaN(parseFloat(value))) return '';
+         return parseFloat(value).toFixed(2); 
+      },
+      formatDate(value) {
+          return new Date(value).toISOString().replace('T',' ').substring(0,19);
+      },
+	  formatCoin(value){
+		  return value.split(":")[0];
+	  },
+	  formatUpper(value){
+		  return value.toUpperCase();
+	  }
+  }
+
+})    
+
+	
+	
+	</script>
+	
+	
+</html>
