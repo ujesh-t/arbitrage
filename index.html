@@ -113,7 +113,7 @@
 		}).then(function(result){
 			vm.cexCoinList = result.data;
 
-			fetch("https://cors-anywhere.herokuapp.com/https://api.wazirx.com/api/v2/market-status").then(function(response){
+			fetch("waz.php").then(function(response){
 			return response.json();
 			}).then(function(result){
 				result.markets.forEach(row => {
