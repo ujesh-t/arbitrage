@@ -102,7 +102,7 @@
   created: function(){
     var vm = this;
 
-		fetch("https://api.exchangeratesapi.io/latest").then(function(response){
+		fetch("https://api.exchangeratesapi.io/latest?access_key=d49ed9a83d03e9d091818fe9112266ad").then(function(response){
 			return response.json();
 		}).then(function(result){
 			vm.rate = result.rates.INR;
